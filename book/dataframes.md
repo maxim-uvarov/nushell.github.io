@@ -2,7 +2,7 @@
 
 ::: warning
 Starting with version 0.93, there is a more recent implementation of dataframes in `nu_plugin_polars`, which includes a newer version of `polars` and many bug fixes.
-From version 0.94 of Nushell, internal dataframes (with the `dfr` prefix) are going to be deprecated in favor of `nu_plugin_polars`.
+From version 0.94 of Nushell, internal dataframes (with the `polars` prefix) are going to be deprecated in favor of `nu_plugin_polars`.
 
 To use `nu_plugin_polars`, you'll need to install [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html) and then install the plugin with commands:
 
@@ -65,19 +65,19 @@ The dataset has 5 columns and 5,429,252 rows. We can check that by using the
 `polars store-ls` command:
 
 ```nu
-> let df = dfr open Data7602DescendingYearOrder.csv
-> dfr ls
-╭─────────────┬─────────────┬─────────┬─────────┬───────────┬─────────────┬──────────────┬────────────┬──────────┬──────────────╮
-│     key     │   created   │ columns │  rows   │   type    │ estimate... │ span_cont... │ span_start │ span_end │ reference... │
-├─────────────┼─────────────┼─────────┼─────────┼───────────┼─────────────┼──────────────┼────────────┼──────────┼──────────────┤
-│ f53ec73a... │ 23 secon... │       5 │ 5429252 │ LazyFrame │    184.5 MB │ dfr open  │    1986929 │  1986940 │            1 │
-╰─────────────┴─────────────┴─────────┴─────────┴───────────┴─────────────┴──────────────┴────────────┴──────────┴──────────────╯
+> let df = polars open Data7602DescendingYearOrder.csv
+> polars store-ls
+╭──────┬─────────┬─────────╮
+│ name │ columns │  rows   │
+├──────┼─────────┼─────────┤
+│ $df  │       5 │ 5429252 │
+╰──────┴─────────┴─────────╯
 ```
 
 We can have a look at the first lines of the file using [`first`](/commands/docs/first.md):
 
 ```nu
-> $df | dfr first
+> $df | polars first
 ╭───┬──────────┬─────────┬──────┬───────────┬──────────╮
 │ # │ anzsic06 │  Area   │ year │ geo_count │ ec_count │
 ├───┼──────────┼─────────┼──────┼───────────┼──────────┤
@@ -88,7 +88,7 @@ We can have a look at the first lines of the file using [`first`](/commands/docs
 ...and finally, we can get an idea of the inferred data types:
 
 ```nu
-> $df | dfr schema
+> $df | polars schema
 ╭───────────┬─────╮
 │ anzsic06  │ str │
 │ Area      │ str │
@@ -130,7 +130,7 @@ And the benchmark for it is:
 Here bare nushell goes almost like pandas!
 
 Probably we can load the data a bit faster. This time we will use Nushell's
-`dfr open` command:
+`polars open` command:
 
 ```nu
 > timeit {dfr open Data7602DescendingYearOrder.csv; null}
