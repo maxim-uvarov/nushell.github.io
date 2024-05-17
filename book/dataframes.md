@@ -65,8 +65,8 @@ The dataset has 5 columns and 5,429,252 rows. We can check that by using the
 `polars store-ls` command:
 
 ```nu
-> let df = polars open Data7602DescendingYearOrder.csv
-> polars store-ls
+> let df = dfr open Data7602DescendingYearOrder.csv
+> dfr ls
 ╭─────────────┬─────────────┬─────────┬─────────┬───────────┬─────────────┬──────────────┬────────────┬──────────┬──────────────╮
 │     key     │   created   │ columns │  rows   │   type    │ estimate... │ span_cont... │ span_start │ span_end │ reference... │
 ├─────────────┼─────────────┼─────────┼─────────┼───────────┼─────────────┼──────────────┼────────────┼──────────┼──────────────┤
@@ -77,7 +77,7 @@ The dataset has 5 columns and 5,429,252 rows. We can check that by using the
 We can have a look at the first lines of the file using [`first`](/commands/docs/first.md):
 
 ```nu
-> $df | polars first | polars collect
+> $df | dfr first
 ╭───┬──────────┬─────────┬──────┬───────────┬──────────╮
 │ # │ anzsic06 │  Area   │ year │ geo_count │ ec_count │
 ├───┼──────────┼─────────┼──────┼───────────┼──────────┤
@@ -88,7 +88,7 @@ We can have a look at the first lines of the file using [`first`](/commands/docs
 ...and finally, we can get an idea of the inferred data types:
 
 ```nu
-> $df | polars schema
+> $df | dfr schema
 ╭───────────┬─────╮
 │ anzsic06  │ str │
 │ Area      │ str │
@@ -130,10 +130,10 @@ And the benchmark for it is:
 Here bare nushell goes almost like pandas!
 
 Probably we can load the data a bit faster. This time we will use Nushell's
-`polars open` command:
+`dfr open` command:
 
 ```nu
-> timeit {polars open Data7602DescendingYearOrder.csv | polars collect; null}
+> timeit {dfr open Data7602DescendingYearOrder.csv; null}
 11sec 994ms 700µs 125ns
 ```
 
@@ -191,9 +191,9 @@ all the operations in one `nu` file, to make sure we are doing similar
 operations:
 
 ```nu
-('let df = polars open Data7602DescendingYearOrder.csv
-let res = $df | polars group-by year | polars agg (polars col geo_count | polars sum)
-$res | polars collect'
+('let df = dfr open Data7602DescendingYearOrder.csv
+let res = $df | dfr group-by year | dfr agg (dfr col geo_count | dfr sum)
+$res'
 | save load.nu -f)
 ```
 
