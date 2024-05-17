@@ -105,7 +105,7 @@ will load the data using Nushell's [`open`](/commands/docs/open.md) command:
 
 ```nu
 > timeit {open Data7602DescendingYearOrder.csv}
-1sec 705ms 555µs 208ns
+1sec 629ms 691µs 834ns
 ```
 
 Loading the file using native Nushell functionality took 1.63 seconds. Not bad for
@@ -124,7 +124,7 @@ And the benchmark for it is:
 
 ```nu
 > timeit {python load.py}
-3sec 539ms 303µs 417ns
+1sec 336ms 778µs
 ```
 
 Here bare nushell goes almost like pandas!
@@ -134,5 +134,5 @@ Probably we can load the data a bit faster. This time we will use Nushell's
 
 ```nu
 > timeit {dfr open Data7602DescendingYearOrder.csv; null}
-11sec 994ms 700µs 125ns
+126ms 213µs 125ns
 ```
