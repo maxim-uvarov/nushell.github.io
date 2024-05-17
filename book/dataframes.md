@@ -67,11 +67,11 @@ The dataset has 5 columns and 5,429,252 rows. We can check that by using the
 ```nu
 > let df = polars open Data7602DescendingYearOrder.csv
 > polars store-ls
-╭──────┬─────────┬─────────╮
-│ name │ columns │  rows   │
-├──────┼─────────┼─────────┤
-│ $df  │       5 │ 5429252 │
-╰──────┴─────────┴─────────╯
+╭──────────────────────────────────────┬─────────┬─────────┬─────────┬───────────┬────────────────┬───────────────┬────────────┬──────────┬─────────────────╮
+│                 key                  │ created │ columns │  rows   │   type    │ estimated_size │ span_contents │ span_start │ span_end │ reference_count │
+├──────────────────────────────────────┼─────────┼─────────┼─────────┼───────────┼────────────────┼───────────────┼────────────┼──────────┼─────────────────┤
+│ 1b26610a-1319-400e-b724-2f3baa0fc6c5 │ now     │       5 │ 5429252 │ DataFrame │       184.5 MB │ polars open   │    1986861 │  1986872 │               1 │
+╰──────────────────────────────────────┴─────────┴─────────┴─────────┴───────────┴────────────────┴───────────────┴────────────┴──────────┴─────────────────╯
 ```
 
 We can have a look at the first lines of the file using [`first`](/commands/docs/first.md):
@@ -105,7 +105,7 @@ will load the data using Nushell's [`open`](/commands/docs/open.md) command:
 
 ```nu
 > timeit {open Data7602DescendingYearOrder.csv}
-1sec 705ms 555µs 208ns
+1sec 648ms 940µs 959ns
 ```
 
 Loading the file using native Nushell functionality took 1.63 seconds. Not bad for
@@ -124,7 +124,7 @@ And the benchmark for it is:
 
 ```nu
 > timeit {python load.py}
-3sec 539ms 303µs 417ns
+1sec 331ms 548µs 750ns
 ```
 
 Here bare nushell goes almost like pandas!
@@ -133,6 +133,6 @@ Probably we can load the data a bit faster. This time we will use Nushell's
 `polars open` command:
 
 ```nu
-> timeit {dfr open Data7602DescendingYearOrder.csv; null}
-11sec 994ms 700µs 125ns
+> timeit {polars open Data7602DescendingYearOrder.csv; null}
+9sec 157ms 826µs 666ns
 ```
