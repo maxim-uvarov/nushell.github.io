@@ -67,12 +67,11 @@ The dataset has 5 columns and 5,429,252 rows. We can check that by using the
 ```nu
 > let df = polars open Data7602DescendingYearOrder.csv
 > polars store-ls
-
-╭───┬────────┬─────────┬─────────╮
-│ # │  name  │ columns │  rows   │
-├───┼────────┼─────────┼─────────┤
-│ 0 │ $df    │       5 │ 5429252 │
-╰───┴────────┴─────────┴─────────╯
+╭─────────────┬─────────────┬─────────┬─────────┬───────────┬─────────────┬──────────────┬────────────┬──────────┬──────────────╮
+│     key     │   created   │ columns │  rows   │   type    │ estimate... │ span_cont... │ span_start │ span_end │ reference... │
+├─────────────┼─────────────┼─────────┼─────────┼───────────┼─────────────┼──────────────┼────────────┼──────────┼──────────────┤
+│ f53ec73a... │ 23 secon... │       5 │ 5429252 │ LazyFrame │    184.5 MB │ polars open  │    1986929 │  1986940 │            1 │
+╰─────────────┴─────────────┴─────────┴─────────┴───────────┴─────────────┴──────────────┴────────────┴──────────┴──────────────╯
 ```
 
 We can have a look at the first lines of the file using [`first`](/commands/docs/first.md):
@@ -88,17 +87,15 @@ We can have a look at the first lines of the file using [`first`](/commands/docs
 
 ...and finally, we can get an idea of the inferred data types:
 
-╭───┬───────────┬───────╮
-│ # │  column   │ dtype │
-├───┼───────────┼───────┤
-│ 0 │ anzsic06  │ str   │
-│ 1 │ Area      │ str   │
-│ 2 │ year      │ i64   │
-│ 3 │ geo_count │ i64   │
-│ 4 │ ec_count  │ i64   │
-╰───┴───────────┴───────╯
 ```nu
 > $df | polars schema
+╭───────────┬─────╮
+│ anzsic06  │ str │
+│ Area      │ str │
+│ year      │ i64 │
+│ geo_count │ i64 │
+│ ec_count  │ i64 │
+╰───────────┴─────╯
 ```
 
 ### Loading the file
@@ -106,12 +103,12 @@ We can have a look at the first lines of the file using [`first`](/commands/docs
 Let's start by comparing loading times between the various methods. First, we
 will load the data using Nushell's [`open`](/commands/docs/open.md) command:
 
-30sec 479ms 614us 400ns
 ```nu
 > timeit {open Data7602DescendingYearOrder.csv}
+1sec 705ms 555µs 208ns
 ```
 
-Loading the file using native Nushell functionality took 30 seconds. Not bad for
+Loading the file using native Nushell functionality took 1.63 seconds. Not bad for
 loading five million records! But we can do a bit better than that.
 
 Let's now use Pandas. We are going to use the next script to load the file:
@@ -127,20 +124,18 @@ And the benchmark for it is:
 
 ```nu
 > timeit {python load.py}
-2sec 91ms 872us 900ns
+3sec 539ms 303µs 417ns
 ```
 
-That is a great improvement, from 30 seconds to 2 seconds. Nicely done, Pandas!
+Here bare nushell goes almost like pandas!
 
 Probably we can load the data a bit faster. This time we will use Nushell's
 `polars open` command:
 
-601ms 700us 700ns
 ```nu
 > timeit {polars open Data7602DescendingYearOrder.csv | polars collect; null}
+11sec 994ms 700µs 125ns
 ```
-
-This time it took us 0.6 seconds. Not bad at all.
 
 ### Group-by comparison
 
@@ -164,12 +159,12 @@ timeit {
         | math sum
     }
 }
-6min 30sec 622ms 312us
 ```
 ```output-numd
+3sec 729ms 207µs 334ns
 ```
 
-So, six minutes to perform this aggregated operation.
+So, 3.7 seconds to perform this aggregated operation.
 
 Let's try the same operation in pandas:
 
@@ -184,10 +179,9 @@ print(res)'
 
 And the result from the benchmark is:
 
-
-1sec 966ms 954us 800ns
 ```nu
 > timeit {python load.py | null}
+1sec 669ms 508µs 208ns
 ```
 
 Not bad at all. Again, pandas managed to get it done in a fraction of the time.
@@ -207,8 +201,7 @@ and the benchmark with dataframes is:
 
 ```nu
 > timeit {source load.nu}
-
-557ms 658us 500ns
+4sec 703ms 508µs 542ns
 ```
 
 Luckily Nushell dataframes managed to halve the time again. Isn't that great?
@@ -264,11 +257,14 @@ To see all the dataframes that are stored in memory you can use
 
 ```nu
 > polars store-ls
-╭───────────────┬─────────┬─────────┬──────┬───────────┬───────────────┬───────────────┬────────────┬──────────┬────────────────╮
-│      key      │ created │ columns │ rows │   type    │ estimated_... │ span_contents │ span_start │ span_end │ reference_c... │
-├───────────────┼─────────┼─────────┼──────┼───────────┼───────────────┼───────────────┼────────────┼──────────┼────────────────┤
-│ 43f53faa-9... │ now     │       8 │   10 │ DataFrame │         403 B │ polars open   │    1987476 │  1987487 │              1 │
-╰───────────────┴─────────┴─────────┴──────┴───────────┴───────────────┴───────────────┴────────────┴──────────┴────────────────╯
+╭─────────────┬─────────────┬─────────┬─────────┬───────────┬─────────────┬──────────────┬────────────┬──────────┬──────────────╮
+│     key     │   created   │ columns │  rows   │   type    │ estimate... │ span_cont... │ span_start │ span_end │ reference... │
+├─────────────┼─────────────┼─────────┼─────────┼───────────┼─────────────┼──────────────┼────────────┼──────────┼──────────────┤
+│ 6899179e... │ 22 secon... │       5 │ 5429252 │ LazyFrame │    184.5 MB │ polars open  │    2004276 │  2004287 │            1 │
+│ 8747f928... │ 22 secon... │       2 │      21 │ LazyFrame │       336 B │ polars agg   │    2004359 │  2004369 │            1 │
+│ 1185b96b... │ 18 secon... │       8 │      10 │ LazyFrame │       403 B │ polars open  │    1991273 │  1991284 │            1 │
+│ f53ec73a... │ a minute... │       5 │ 5429252 │ LazyFrame │    184.5 MB │ polars open  │    1986929 │  1986940 │            1 │
+╰─────────────┴─────────────┴─────────┴─────────┴───────────┴─────────────┴──────────────┴────────────┴──────────┴──────────────╯
 ```
 
 As you can see, the command shows the created dataframes together with basic
@@ -279,20 +275,14 @@ dataframe variable to the stream
 
 ```nu
 > $df
-╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬────────╮
-│ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │  word  │
-├───┼───────┼───────┼─────────┼─────────┼───────┼────────┼───────┼────────┤
-│ 0 │     1 │    11 │    0.10 │    1.00 │ a     │ b      │ c     │ first  │
-│ 1 │     2 │    12 │    0.20 │    1.00 │ a     │ b      │ c     │ second │
-│ 2 │     3 │    13 │    0.30 │    2.00 │ a     │ b      │ c     │ third  │
-│ 3 │     4 │    14 │    0.40 │    3.00 │ b     │ a      │ c     │ second │
-│ 4 │     0 │    15 │    0.50 │    4.00 │ b     │ a      │ a     │ third  │
-│ 5 │     6 │    16 │    0.60 │    5.00 │ b     │ a      │ a     │ second │
-│ 6 │     7 │    17 │    0.70 │    6.00 │ b     │ c      │ a     │ third  │
-│ 7 │     8 │    18 │    0.80 │    7.00 │ c     │ c      │ b     │ eight  │
-│ 8 │     9 │    19 │    0.90 │    8.00 │ c     │ c      │ b     │ ninth  │
-│ 9 │     0 │    10 │    0.00 │    9.00 │ c     │ c      │ b     │ ninth  │
-╰───┴───────┴───────┴─────────┴─────────┴───────┴────────┴───────┴────────╯
+╭────────────────┬──────────────────────────────────────────────────────────────────╮
+│ plan           │                                                                  │
+│                │   Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv │
+│                │   PROJECT */8 COLUMNS                                            │
+│ optimized_plan │                                                                  │
+│                │   Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv │
+│                │   PROJECT */8 COLUMNS                                            │
+╰────────────────┴──────────────────────────────────────────────────────────────────╯
 ```
 
 With the dataframe in memory we can start doing column operations with the
@@ -310,11 +300,10 @@ that exist in `df` by using the `aggregate` command
 
 ```nu
 > $df | polars sum
-╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬──────╮
-│ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │ word │
-├───┼───────┼───────┼─────────┼─────────┼───────┼────────┼───────┼──────┤
-│ 0 │    40 │   145 │    4.50 │   46.00 │       │        │       │      │
-╰───┴───────┴───────┴─────────┴─────────┴───────┴────────┴───────┴──────╯
+╭────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ plan           │  SELECT [col("int_1").sum(), col("int_2").sum(), col("float_1").sum(), col("float_2").sum(), null.cast(St... │
+│ optimized_plan │  SELECT [col("int_1").sum(), col("int_2").sum(), col("float_1").sum(), col("float_2").sum(), null.cast(St... │
+╰────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 As you can see, the aggregate function computes the sum for those columns where
@@ -323,11 +312,14 @@ the columns you want by using the [`polars select`](/commands/docs/polars_select
 
 ```nu
 > $df | polars sum | polars select int_1 int_2 float_1 float_2
-╭───┬───────┬───────┬─────────┬─────────╮
-│ # │ int_1 │ int_2 │ float_1 │ float_2 │
-├───┼───────┼───────┼─────────┼─────────┤
-│ 0 │    40 │   145 │    4.50 │   46.00 │
-╰───┴───────┴───────┴─────────┴─────────╯
+╭────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ plan           │  SELECT [col("int_1"), col("int_2"), col("float_1"), col("float_2")] FROM                                    │
+│                │    SELECT [col("int_1").sum(), c...                                                                          │
+│ optimized_plan │  SELECT [col("int_1").sum(), col("int_2").sum(), col("float_1").sum(), col("float_2").sum()] FROM            │
+│                │                                                                                                              │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv                                           │
+│                │     PROJECT 4/8 COLUMNS                                                                                      │
+╰────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 You can even store the result from this aggregation as you would store any
@@ -346,12 +338,15 @@ And now we have two dataframes stored in memory
 
 ```nu
 > polars store-ls
-╭───────────────┬─────────┬─────────┬──────┬───────────┬───────────────┬───────────────┬────────────┬──────────┬────────────────╮
-│      key      │ created │ columns │ rows │   type    │ estimated_... │ span_contents │ span_start │ span_end │ reference_c... │
-├───────────────┼─────────┼─────────┼──────┼───────────┼───────────────┼───────────────┼────────────┼──────────┼────────────────┤
-│ 43f53faa-9... │ now     │       8 │   10 │ DataFrame │         403 B │ polars open   │    1987476 │  1987487 │              1 │
-│ 69bca897-0... │ now     │       4 │    1 │ DataFrame │          32 B │ polars select │    1988496 │  1988509 │              1 │
-╰───────────────┴─────────┴─────────┴──────┴───────────┴───────────────┴───────────────┴────────────┴──────────┴────────────────╯
+╭─────────────┬─────────────┬─────────┬─────────┬───────────┬─────────────┬──────────────┬────────────┬──────────┬──────────────╮
+│     key     │   created   │ columns │  rows   │   type    │ estimate... │ span_cont... │ span_start │ span_end │ reference... │
+├─────────────┼─────────────┼─────────┼─────────┼───────────┼─────────────┼──────────────┼────────────┼──────────┼──────────────┤
+│ 6899179e... │ 37 secon... │       5 │ 5429252 │ LazyFrame │    184.5 MB │ polars open  │    2004276 │  2004287 │            1 │
+│ 8747f928... │ 37 secon... │       2 │      21 │ LazyFrame │       336 B │ polars agg   │    2004359 │  2004369 │            1 │
+│ 1185b96b... │ 33 secon... │       8 │      10 │ LazyFrame │       403 B │ polars open  │    1991273 │  1991284 │            1 │
+│ f53ec73a... │ a minute... │       5 │ 5429252 │ LazyFrame │    184.5 MB │ polars open  │    1986929 │  1986940 │            1 │
+│ 0d5fa6fc... │ 15 secon... │       4 │       1 │ LazyFrame │        32 B │ polars se... │    1992293 │  1992306 │            1 │
+╰─────────────┴─────────────┴─────────┴─────────┴───────────┴─────────────┴──────────────┴────────────┴──────────┴──────────────╯
 ```
 
 Pretty neat, isn't it?
@@ -388,14 +383,28 @@ right dataframe
 
 ```nu
 > $df | polars join $df_a int_1 int_1
-╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬────────┬─────────┬───────────┬───────────┬─────────╮
-│ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │  word  │ int_2_x │ float_1_x │ float_2_x │ first_x │
-├───┼───────┼───────┼─────────┼─────────┼───────┼────────┼───────┼────────┼─────────┼───────────┼───────────┼─────────┤
-│ 0 │     6 │    16 │    0.60 │    5.00 │ b     │ a      │ a     │ second │      11 │      0.10 │      0.00 │ b       │
-│ 1 │     7 │    17 │    0.70 │    6.00 │ b     │ c      │ a     │ third  │      12 │      0.20 │      1.00 │ a       │
-│ 2 │     8 │    18 │    0.80 │    7.00 │ c     │ c      │ b     │ eight  │      13 │      0.30 │      2.00 │ a       │
-│ 3 │     9 │    19 │    0.90 │    8.00 │ c     │ c      │ b     │ ninth  │      14 │      0.40 │      3.00 │ a       │
-╰───┴───────┴───────┴─────────┴─────────┴───────┴────────┴───────┴────────┴─────────┴───────────┴───────────┴─────────╯
+╭────────────────┬──────────────────────────────────────────────────────────────────────╮
+│ plan           │ INNER JOIN:                                                          │
+│                │ LEFT PLAN ON: [col("int_1")]                                         │
+│                │                                                                      │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv   │
+│                │     PROJECT */8 COLUMNS                                              │
+│                │ RIGHT PLAN ON: [col("int_1")]                                        │
+│                │                                                                      │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small_a.csv │
+│                │     PROJECT */5 COLUMNS                                              │
+│                │ END INNER JOIN                                                       │
+│ optimized_plan │ INNER JOIN:                                                          │
+│                │ LEFT PLAN ON: [col("int_1")]                                         │
+│                │                                                                      │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv   │
+│                │     PROJECT */8 COLUMNS                                              │
+│                │ RIGHT PLAN ON: [col("int_1")]                                        │
+│                │                                                                      │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small_a.csv │
+│                │     PROJECT */5 COLUMNS                                              │
+│                │ END INNER JOIN                                                       │
+╰────────────────┴──────────────────────────────────────────────────────────────────────╯
 ```
 
 ::: tip
@@ -409,11 +418,28 @@ For example:
 
 ```nu
 > $df | polars join $df_a [int_1 first] [int_1 first]
-╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬────────┬─────────┬───────────┬───────────╮
-│ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │  word  │ int_2_x │ float_1_x │ float_2_x │
-├───┼───────┼───────┼─────────┼─────────┼───────┼────────┼───────┼────────┼─────────┼───────────┼───────────┤
-│ 0 │     6 │    16 │    0.60 │    5.00 │ b     │ a      │ a     │ second │      11 │      0.10 │      0.00 │
-╰───┴───────┴───────┴─────────┴─────────┴───────┴────────┴───────┴────────┴─────────┴───────────┴───────────╯
+╭────────────────┬──────────────────────────────────────────────────────────────────────╮
+│ plan           │ INNER JOIN:                                                          │
+│                │ LEFT PLAN ON: [col("int_1"), col("first")]                           │
+│                │                                                                      │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv   │
+│                │     PROJECT */8 COLUMNS                                              │
+│                │ RIGHT PLAN ON: [col("int_1"), col("first")]                          │
+│                │                                                                      │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small_a.csv │
+│                │     PROJECT */5 COLUMNS                                              │
+│                │ END INNER JOIN                                                       │
+│ optimized_plan │ INNER JOIN:                                                          │
+│                │ LEFT PLAN ON: [col("int_1"), col("first")]                           │
+│                │                                                                      │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv   │
+│                │     PROJECT */8 COLUMNS                                              │
+│                │ RIGHT PLAN ON: [col("int_1"), col("first")]                          │
+│                │                                                                      │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small_a.csv │
+│                │     PROJECT */5 COLUMNS                                              │
+│                │ END INNER JOIN                                                       │
+╰────────────────┴──────────────────────────────────────────────────────────────────────╯
 ```
 
 By default, the join command does an inner join, meaning that it will keep the
@@ -447,14 +473,18 @@ lazy operation waiting to be completed by adding an aggregation. Using the
 
 ```nu
 > $group | polars agg (polars col int_1 | polars sum)
-╭────────────────┬───────────────────────────────────────────────────────────────────────────────────────╮
-│ plan           │ AGGREGATE                                                                             │
-│                │     [col("int_1").sum()] BY [col("first")] FROM                                       │
-│                │   DF ["int_1", "int_2", "float_1", "float_2"]; PROJECT */8 COLUMNS; SELECTION: "None" │
-│ optimized_plan │ AGGREGATE                                                                             │
-│                │     [col("int_1").sum()] BY [col("first")] FROM                                       │
-│                │   DF ["int_1", "int_2", "float_1", "float_2"]; PROJECT 2/8 COLUMNS; SELECTION: "None" │
-╰────────────────┴───────────────────────────────────────────────────────────────────────────────────────╯
+╭────────────────┬────────────────────────────────────────────────────────────────────╮
+│ plan           │ AGGREGATE                                                          │
+│                │     [col("int_1").sum()] BY [col("first")] FROM                    │
+│                │                                                                    │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv │
+│                │     PROJECT */8 COLUMNS                                            │
+│ optimized_plan │ AGGREGATE                                                          │
+│                │     [col("int_1").sum()] BY [col("first")] FROM                    │
+│                │                                                                    │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv │
+│                │     PROJECT 2/8 COLUMNS                                            │
+╰────────────────┴────────────────────────────────────────────────────────────────────╯
 ```
 
 or we can define multiple aggregations on the same or different columns
@@ -527,16 +557,19 @@ dataframes you will see in total four dataframes
 
 ```nu
 > polars store-ls
-╭──────────────┬─────────┬─────────┬──────┬─────────────┬───────────────┬───────────────┬────────────┬──────────┬───────────────╮
-│     key      │ created │ columns │ rows │    type     │ estimated_... │ span_contents │ span_start │ span_end │ reference_... │
-├──────────────┼─────────┼─────────┼──────┼─────────────┼───────────────┼───────────────┼────────────┼──────────┼───────────────┤
-│ 69bca897-... │ now     │       4 │    1 │ DataFrame   │          32 B │ polars select │    1988496 │  1988509 │             1 │
-│ d87fcac0-... │      ❎ │         │      │ LazyGroupBy │               │ polars gro... │    1991702 │  1991717 │             1 │
-│ 43f53faa-... │ now     │       8 │   10 │ DataFrame   │         403 B │ polars open   │    1987476 │  1987487 │             1 │
-│ 16009092-... │ now     │       5 │    4 │ DataFrame   │         132 B │ polars open   │    1989333 │  1989344 │             1 │
-│ a76be7b3-... │ now     │       4 │    3 │ DataFrame   │          96 B │ polars wit... │    1991468 │  1991486 │             1 │
-│ cb6b04ca-... │ now     │       2 │    3 │ DataFrame   │          48 B │ polars int... │    1991136 │  1991150 │             1 │
-╰──────────────┴─────────┴─────────┴──────┴─────────────┴───────────────┴───────────────┴────────────┴──────────┴───────────────╯
+╭─────────────┬─────────────┬─────────┬─────────┬─────────────┬─────────────┬─────────────┬────────────┬──────────┬─────────────╮
+│     key     │   created   │ columns │  rows   │    type     │ estimate... │ span_con... │ span_start │ span_end │ referenc... │
+├─────────────┼─────────────┼─────────┼─────────┼─────────────┼─────────────┼─────────────┼────────────┼──────────┼─────────────┤
+│ 1185b96b... │ a minute... │       8 │      10 │ LazyFrame   │       403 B │ polars open │    1991273 │  1991284 │           1 │
+│ f53ec73a... │ 2 minute... │       5 │ 5429252 │ LazyFrame   │    184.5 MB │ polars open │    1986929 │  1986940 │           1 │
+│ 0d5fa6fc... │ 28 secon... │       4 │       1 │ LazyFrame   │        32 B │ polars s... │    1992293 │  1992306 │           1 │
+│ 6899179e... │ a minute... │       5 │ 5429252 │ LazyFrame   │    184.5 MB │ polars open │    2004276 │  2004287 │           1 │
+│ 8747f928... │ a minute... │       2 │      21 │ LazyFrame   │       336 B │ polars agg  │    2004359 │  2004369 │           1 │
+│ aea996a7... │ 13 secon... │       2 │       3 │ DataFrame   │        48 B │ polars i... │    1994930 │  1994944 │           1 │
+│ 2133bd1f... │ 13 secon... │       4 │       3 │ DataFrame   │        96 B │ polars a... │    1995285 │  1995298 │           1 │
+│ 20c0eca7... │ 13 secon... │       5 │       4 │ LazyFrame   │       132 B │ polars open │    1993130 │  1993141 │           1 │
+│ aba59261... │          ❎ │         │         │ LazyGroupBy │             │ polars g... │    1995527 │  1995542 │           1 │
+╰─────────────┴─────────────┴─────────┴─────────┴─────────────┴─────────────┴─────────────┴────────────┴──────────┴─────────────╯
 ```
 
 One thing that is important to mention is how the memory is being optimized
@@ -605,13 +638,12 @@ Let's rename our previous Series so it has a memorable name
 ```nu
 > let new_2 = $new_2 | polars rename "0" memorable
 > $new_2
-╭───┬───────────╮
-│ # │ memorable │
-├───┼───────────┤
-│ 0 │        37 │
-│ 1 │        34 │
-│ 2 │        22 │
-╰───┴───────────╯
+╭────────────────┬────────────────────────────────────────────────────╮
+│ plan           │ RENAME                                             │
+│                │   DF ["0"]; PROJECT */1 COLUMNS; SELECTION: "None" │
+│ optimized_plan │ RENAME                                             │
+│                │   DF ["0"]; PROJECT */1 COLUMNS; SELECTION: "None" │
+╰────────────────┴────────────────────────────────────────────────────╯
 ```
 
 We can also do basic operations with two Series as long as they have the same
@@ -661,13 +693,14 @@ and we can start piping things in order to create new columns and dataframes
 ```nu
 > let new_df = $new_df | polars with-column ((polars col a) * (polars col b) / (polars col new_col) | polars as my_sum)
 > $new_df
-╭───┬───┬───┬─────────┬────────╮
-│ # │ a │ b │ new_col │ my_sum │
-├───┼───┼───┼─────────┼────────┤
-│ 0 │ 1 │ 2 │       9 │      0 │
-│ 1 │ 3 │ 4 │       8 │      1 │
-│ 2 │ 5 │ 6 │       4 │      7 │
-╰───┴───┴───┴─────────┴────────╯
+╭────────────────┬──────────────────────────────────────────────────────────────────────╮
+│ plan           │  WITH_COLUMNS:                                                       │
+│                │  [[([(col("a")) * (col("b"))]) // (col("new_col"))].alias("my_sum")] │
+│                │   DF ["a", "b", "new_col"]; PROJECT */3 COLUMNS; SELECTION: "None"   │
+│ optimized_plan │  WITH_COLUMNS:                                                       │
+│                │  [[([(col("a")) * (col("b"))]) // (col("new_col"))].alias("my_sum")] │
+│                │   DF ["a", "b", "new_col"]; PROJECT */3 COLUMNS; SELECTION: "None"   │
+╰────────────────┴──────────────────────────────────────────────────────────────────────╯
 ```
 
 Nushell's piping system can help you create very interesting workflows.
@@ -707,13 +740,13 @@ The masks can also be created from Nushell lists, for example:
 
 ```nu
 > let mask1 = [true true false] | polars into-df
-╭───┬───┬───┬─────────┬────────╮
-│ # │ a │ b │ new_col │ my_sum │
-├───┼───┼───┼─────────┼────────┤
-│ 0 │ 1 │ 2 │       9 │      0 │
-│ 1 │ 3 │ 4 │       8 │      1 │
-╰───┴───┴───┴─────────┴────────╯
 #> $new_df | polars filter-with $mask1
+#╭───┬───┬───┬─────────┬────────╮
+#│ # │ a │ b │ new_col │ my_sum │
+#├───┼───┼───┼─────────┼────────┤
+#│ 0 │ 1 │ 2 │       9 │      0 │
+#│ 1 │ 3 │ 4 │       8 │      1 │
+#╰───┴───┴───┴─────────┴────────╯
 ```
 
 To create complex masks, we have the `AND`
@@ -759,17 +792,16 @@ and this new mask can be used to filter the dataframe
 
 ```nu
 > $df | polars filter-with $mask3
-╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬────────╮
-│ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │  word  │
-├───┼───────┼───────┼─────────┼─────────┼───────┼────────┼───────┼────────┤
-│ 0 │     4 │    14 │    0.40 │    3.00 │ b     │ a      │ c     │ second │
-│ 1 │     0 │    15 │    0.50 │    4.00 │ b     │ a      │ a     │ third  │
-│ 2 │     6 │    16 │    0.60 │    5.00 │ b     │ a      │ a     │ second │
-│ 3 │     7 │    17 │    0.70 │    6.00 │ b     │ c      │ a     │ third  │
-│ 4 │     8 │    18 │    0.80 │    7.00 │ c     │ c      │ b     │ eight  │
-│ 5 │     9 │    19 │    0.90 │    8.00 │ c     │ c      │ b     │ ninth  │
-│ 6 │     0 │    10 │    0.00 │    9.00 │ c     │ c      │ b     │ ninth  │
-╰───┴───────┴───────┴─────────┴─────────┴───────┴────────┴───────┴────────╯
+╭────────────────┬──────────────────────────────────────────────────────────────────╮
+│ plan           │ FILTER col("first").is_in([Series[list]]) FROM                   │
+│                │                                                                  │
+│                │   Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv │
+│                │   PROJECT */8 COLUMNS                                            │
+│ optimized_plan │                                                                  │
+│                │   Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv │
+│                │   PROJECT */8 COLUMNS                                            │
+│                │   SELECTION: col("first").is_in([Series[list]])                  │
+╰────────────────┴──────────────────────────────────────────────────────────────────╯
 ```
 
 Another operation that can be done with masks is setting or replacing a value
@@ -899,8 +931,8 @@ example, we can use it to count how many occurrences we have in the column
 ╭───┬───────┬───────╮
 │ # │ first │ count │
 ├───┼───────┼───────┤
-│ 0 │ b     │     4 │
-│ 1 │ a     │     3 │
+│ 0 │ a     │     3 │
+│ 1 │ b     │     4 │
 │ 2 │ c     │     3 │
 ╰───┴───────┴───────╯
 ```
@@ -913,13 +945,17 @@ to only get the unique unique values from a series, like this
 
 ```nu
 > $df | polars get first | polars unique
-╭───┬───────╮
-│ # │ first │
-├───┼───────┤
-│ 0 │ c     │
-│ 1 │ a     │
-│ 2 │ b     │
-╰───┴───────╯
+╭────────────────┬──────────────────────────────────────────────────────────────────────╮
+│ plan           │ UNIQUE[maintain_order: true, keep_strategy: First] BY None           │
+│                │    SELECT [col("first")] FROM                                        │
+│                │                                                                      │
+│                │       Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv │
+│                │       PROJECT */8 COLUMNS                                            │
+│ optimized_plan │ UNIQUE[maintain_order: true, keep_strategy: First] BY None           │
+│                │                                                                      │
+│                │     Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv   │
+│                │     PROJECT 1/8 COLUMNS                                              │
+╰────────────────┴──────────────────────────────────────────────────────────────────────╯
 ```
 
 Or we can get a mask that we can use to filter out the rows where data is
@@ -967,10 +1003,14 @@ Let's create a small example of a lazy dataframe
 ```nu
 > let a = [[a b]; [1 a] [2 b] [3 c] [4 d]] | polars into-df
 > $a
-╭────────────────┬───────────────────────────────────────────────────────╮
-│ plan           │ DF ["a", "b"]; PROJECT */2 COLUMNS; SELECTION: "None" │
-│ optimized_plan │ DF ["a", "b"]; PROJECT */2 COLUMNS; SELECTION: "None" │
-╰────────────────┴───────────────────────────────────────────────────────╯
+╭───┬───┬───╮
+│ # │ a │ b │
+├───┼───┼───┤
+│ 0 │ 1 │ a │
+│ 1 │ 2 │ b │
+│ 2 │ 3 │ c │
+│ 3 │ 4 │ d │
+╰───┴───┴───╯
 ```
 
 As you can see, the resulting dataframe is not yet evaluated, it stays as a
@@ -1090,8 +1130,8 @@ $a
 ╭───┬──────┬─────┬──────╮
 │ # │ name │ sum │ mean │
 ├───┼──────┼─────┼──────┤
-│ 0 │ one  │   2 │ 1.00 │
-│ 1 │ two  │   5 │ 2.50 │
+│ 0 │ two  │   5 │ 2.50 │
+│ 1 │ one  │   2 │ 1.00 │
 ╰───┴──────┴─────┴──────╯
 ```
 
