@@ -64,7 +64,7 @@ Feel free to download it if you want to follow these tests.
 The dataset has 5 columns and 5,429,252 rows. We can check that by using the
 `polars store-ls` command:
 
-```nu
+```nu no-run
 > let df = polars open Data7602DescendingYearOrder.csv
 > polars store-ls
 ╭─────────────┬─────────────┬─────────┬─────────┬───────────┬─────────────┬──────────────┬────────────┬──────────┬──────────────╮
@@ -76,7 +76,7 @@ The dataset has 5 columns and 5,429,252 rows. We can check that by using the
 
 We can have a look at the first lines of the file using [`first`](/commands/docs/first.md):
 
-```nu
+```nu no-run
 > $df | polars first | polars collect
 ╭───┬──────────┬─────────┬──────┬───────────┬──────────╮
 │ # │ anzsic06 │  Area   │ year │ geo_count │ ec_count │
@@ -87,7 +87,7 @@ We can have a look at the first lines of the file using [`first`](/commands/docs
 
 ...and finally, we can get an idea of the inferred data types:
 
-```nu
+```nu no-run
 > $df | polars schema
 ╭───────────┬─────╮
 │ anzsic06  │ str │
@@ -461,7 +461,7 @@ To create a `GroupBy` object you only need to use the [`polars_group-by`](/comma
 
 ```nu
 > let group = $df | polars group-by first
-> $group | polars collect
+> $group
 ╭─────────────┬──────────────────────────────────────────────╮
 │ LazyGroupBy │ apply aggregation to complete execution plan │
 ╰─────────────┴──────────────────────────────────────────────╯
@@ -781,7 +781,7 @@ Using the first dataframe that we created we can do something like this
 
 ```nu
 > let mask3 = $df | polars col first | polars is-in [b c]
-> $mask3 | polars collect
+> $mask3
 ╭──────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ input    │ [table 2 rows]                                                                                                     │
 │ function │ Boolean(IsIn)                                                                                                      │
@@ -964,7 +964,11 @@ unique or duplicated. For example, we can select the rows for unique values
 in column `word`
 
 ```nu
-> $df | polars filter-with ((polars col word) | polars is-unique)
+$df
+| polars append ($in | polars select word | polars is-unique)
+| polars filter-with (polars col is_unique)
+```
+```numd-output
 ╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬───────╮
 │ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │ word  │
 ├───┼───────┼───────┼─────────┼─────────┼───────┼────────┼───────┼───────┤
@@ -976,7 +980,11 @@ in column `word`
 Or all the duplicated ones
 
 ```nu
-> $df | polars filter-with ($df | polars get word | polars is-duplicated)
+$df
+| polars append ($in | polars select word | polars is-duplicated)
+| polars filter-with (polars col is_duplicated)
+```
+```numd-output
 ╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬────────╮
 │ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │  word  │
 ├───┼───────┼───────┼─────────┼─────────┼───────┼────────┼───────┼────────┤
