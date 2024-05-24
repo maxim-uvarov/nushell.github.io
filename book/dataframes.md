@@ -132,7 +132,7 @@ Here bare nushell goes almost like pandas!
 Probably we can load the data a bit faster. This time we will use Nushell's
 `polars open` command:
 
-```nu
+```nu no-run
 > timeit {polars open Data7602DescendingYearOrder.csv | polars collect; null}
 11sec 994ms 700µs 125ns
 ```
@@ -199,7 +199,7 @@ $res | polars collect'
 
 and the benchmark with dataframes is:
 
-```nu
+```nu no-run
 > timeit {source load.nu}
 4sec 703ms 508µs 542ns
 ```
@@ -274,7 +274,7 @@ And if you want to see a preview of the loaded dataframe you can send the
 dataframe variable to the stream
 
 ```nu
-> $df
+> $df | polars collect
 ╭────────────────┬──────────────────────────────────────────────────────────────────╮
 │ plan           │                                                                  │
 │                │   Csv SCAN /Users/user/git/nushell.github.io/book/test_small.csv │
@@ -299,7 +299,7 @@ Let's start with basic aggregations on the dataframe. Let's sum all the columns
 that exist in `df` by using the `aggregate` command
 
 ```nu
-> $df | polars sum
+> $df | polars sum | polars collect
 ╭────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ plan           │  SELECT [col("int_1").sum(), col("int_2").sum(), col("float_1").sum(), col("float_2").sum(), null.cast(St... │
 │ optimized_plan │  SELECT [col("int_1").sum(), col("int_2").sum(), col("float_1").sum(), col("float_2").sum(), null.cast(St... │
@@ -311,7 +311,7 @@ a sum makes sense. If you want to filter out the text column, you can select
 the columns you want by using the [`polars select`](/commands/docs/polars_select.md) command
 
 ```nu
-> $df | polars sum | polars select int_1 int_2 float_1 float_2
+> $df | polars sum | polars select int_1 int_2 float_1 float_2 | polars collect
 ╭────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ plan           │  SELECT [col("int_1"), col("int_2"), col("float_1"), col("float_2")] FROM                                    │
 │                │    SELECT [col("int_1").sum(), c...                                                                          │
@@ -382,7 +382,7 @@ column called `int_1` from the left dataframe and the column `int_1` from the
 right dataframe
 
 ```nu
-> $df | polars join $df_a int_1 int_1
+> $df | polars join $df_a int_1 int_1 | polars collect
 ╭────────────────┬──────────────────────────────────────────────────────────────────────╮
 │ plan           │ INNER JOIN:                                                          │
 │                │ LEFT PLAN ON: [col("int_1")]                                         │
@@ -417,7 +417,7 @@ as long as they have the same type.
 For example:
 
 ```nu
-> $df | polars join $df_a [int_1 first] [int_1 first]
+> $df | polars join $df_a [int_1 first] [int_1 first] | polars collect
 ╭────────────────┬──────────────────────────────────────────────────────────────────────╮
 │ plan           │ INNER JOIN:                                                          │
 │                │ LEFT PLAN ON: [col("int_1"), col("first")]                           │
@@ -461,7 +461,7 @@ To create a `GroupBy` object you only need to use the [`polars_group-by`](/comma
 
 ```nu
 > let group = $df | polars group-by first
-> $group
+> $group | polars collect
 ╭─────────────┬──────────────────────────────────────────────╮
 │ LazyGroupBy │ apply aggregation to complete execution plan │
 ╰─────────────┴──────────────────────────────────────────────╯
@@ -472,7 +472,7 @@ lazy operation waiting to be completed by adding an aggregation. Using the
 `GroupBy` we can create aggregations on a column
 
 ```nu
-> $group | polars agg (polars col int_1 | polars sum)
+> $group | polars agg (polars col int_1 | polars sum) | polars collect
 ╭────────────────┬────────────────────────────────────────────────────────────────────╮
 │ plan           │ AGGREGATE                                                          │
 │                │     [col("int_1").sum()] BY [col("first")] FROM                    │
@@ -498,6 +498,7 @@ $group
     (polars col float_2 | polars count)
 ]
 | polars sort-by first
+| polars collect
 ```
 ```output-numd
 ╭────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -637,7 +638,7 @@ Let's rename our previous Series so it has a memorable name
 
 ```nu
 > let new_2 = $new_2 | polars rename "0" memorable
-> $new_2
+> $new_2 | polars collect
 ╭────────────────┬────────────────────────────────────────────────────╮
 │ plan           │ RENAME                                             │
 │                │   DF ["0"]; PROJECT */1 COLUMNS; SELECTION: "None" │
@@ -692,7 +693,7 @@ and we can start piping things in order to create new columns and dataframes
 
 ```nu
 > let new_df = $new_df | polars with-column ((polars col a) * (polars col b) / (polars col new_col) | polars as my_sum)
-> $new_df
+> $new_df | polars collect
 ╭────────────────┬──────────────────────────────────────────────────────────────────────╮
 │ plan           │  WITH_COLUMNS:                                                       │
 │                │  [[([(col("a")) * (col("b"))]) // (col("new_col"))].alias("my_sum")] │
@@ -740,13 +741,13 @@ The masks can also be created from Nushell lists, for example:
 
 ```nu
 > let mask1 = [true true false] | polars into-df
-#> $new_df | polars filter-with $mask1
-#╭───┬───┬───┬─────────┬────────╮
-#│ # │ a │ b │ new_col │ my_sum │
-#├───┼───┼───┼─────────┼────────┤
-#│ 0 │ 1 │ 2 │       9 │      0 │
-#│ 1 │ 3 │ 4 │       8 │      1 │
-#╰───┴───┴───┴─────────┴────────╯
+> $new_df | polars append $mask | polars filter-with '0'
+╭───┬───┬───┬─────────┬────────╮
+│ # │ a │ b │ new_col │ my_sum │
+├───┼───┼───┼─────────┼────────┤
+│ 0 │ 1 │ 2 │       9 │      0 │
+│ 1 │ 3 │ 4 │       8 │      1 │
+╰───┴───┴───┴─────────┴────────╯
 ```
 
 To create complex masks, we have the `AND`
@@ -780,7 +781,7 @@ Using the first dataframe that we created we can do something like this
 
 ```nu
 > let mask3 = $df | polars col first | polars is-in [b c]
-> $mask3
+> $mask3 | polars collect
 ╭──────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ input    │ [table 2 rows]                                                                                                     │
 │ function │ Boolean(IsIn)                                                                                                      │
@@ -791,7 +792,7 @@ Using the first dataframe that we created we can do something like this
 and this new mask can be used to filter the dataframe
 
 ```nu
-> $df | polars filter-with $mask3
+> $df | polars filter-with $mask3  | polars collect
 ╭────────────────┬──────────────────────────────────────────────────────────────────╮
 │ plan           │ FILTER col("first").is_in([Series[list]]) FROM                   │
 │                │                                                                  │
@@ -944,7 +945,7 @@ Continuing with our exploration of `Series`, the next thing that we can do is
 to only get the unique unique values from a series, like this
 
 ```nu
-> $df | polars get first | polars unique
+> $df | polars get first | polars unique | polars collect
 ╭────────────────┬──────────────────────────────────────────────────────────────────────╮
 │ plan           │ UNIQUE[maintain_order: true, keep_strategy: First] BY None           │
 │                │    SELECT [col("first")] FROM                                        │
@@ -962,7 +963,7 @@ Or we can get a mask that we can use to filter out the rows where data is
 unique or duplicated. For example, we can select the rows for unique values
 in column `word`
 
-```nu no-run
+```nu
 > $df | polars filter-with ((polars col word) | polars is-unique)
 ╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬───────╮
 │ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │ word  │
@@ -974,7 +975,7 @@ in column `word`
 
 Or all the duplicated ones
 
-```nu no-run
+```nu
 > $df | polars filter-with ($df | polars get word | polars is-duplicated)
 ╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬────────╮
 │ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │  word  │
@@ -1017,7 +1018,7 @@ As you can see, the resulting dataframe is not yet evaluated, it stays as a
 set of instructions that can be done on the data. If you were to collect that
 dataframe you would get the next result
 
-```nu no-run
+```nu
 > $a | polars collect
 ╭───┬───┬───╮
 │ # │ a │ b │
