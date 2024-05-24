@@ -64,8 +64,8 @@ Feel free to download it if you want to follow these tests.
 The dataset has 5 columns and 5,429,252 rows. We can check that by using the
 `polars store-ls` command:
 
-```nu no-run
-> let df = (polars open .\Data7602DescendingYearOrder.csv)
+```nu
+> let df = polars open Data7602DescendingYearOrder.csv
 > polars store-ls
 
 ╭───┬────────┬─────────┬─────────╮
@@ -77,8 +77,8 @@ The dataset has 5 columns and 5,429,252 rows. We can check that by using the
 
 We can have a look at the first lines of the file using [`first`](/commands/docs/first.md):
 
-```nu no-run
-> $df | polars first
+```nu
+> $df | polars first | polars collect
 ╭───┬──────────┬─────────┬──────┬───────────┬──────────╮
 │ # │ anzsic06 │  Area   │ year │ geo_count │ ec_count │
 ├───┼──────────┼─────────┼──────┼───────────┼──────────┤
@@ -88,8 +88,6 @@ We can have a look at the first lines of the file using [`first`](/commands/docs
 
 ...and finally, we can get an idea of the inferred data types:
 
-```nu no-run
-> $df | polars dtypes
 ╭───┬───────────┬───────╮
 │ # │  column   │ dtype │
 ├───┼───────────┼───────┤
@@ -99,6 +97,8 @@ We can have a look at the first lines of the file using [`first`](/commands/docs
 │ 3 │ geo_count │ i64   │
 │ 4 │ ec_count  │ i64   │
 ╰───┴───────────┴───────╯
+```nu
+> $df | polars schema
 ```
 
 ### Loading the file
@@ -106,9 +106,9 @@ We can have a look at the first lines of the file using [`first`](/commands/docs
 Let's start by comparing loading times between the various methods. First, we
 will load the data using Nushell's [`open`](/commands/docs/open.md) command:
 
-```nu no-run
-> timeit {open .\Data7602DescendingYearOrder.csv}
 30sec 479ms 614us 400ns
+```nu
+> timeit {open Data7602DescendingYearOrder.csv}
 ```
 
 Loading the file using native Nushell functionality took 30 seconds. Not bad for
@@ -116,15 +116,16 @@ loading five million records! But we can do a bit better than that.
 
 Let's now use Pandas. We are going to use the next script to load the file:
 
-```python
-import pandas as pd
+```nu
+('import pandas as pd
 
-df = pd.read_csv("Data7602DescendingYearOrder.csv")
+df = pd.read_csv("Data7602DescendingYearOrder.csv")'
+| save load.py -f)
 ```
 
 And the benchmark for it is:
 
-```nu no-run
+```nu
 > timeit {python load.py}
 2sec 91ms 872us 900ns
 ```
@@ -134,9 +135,9 @@ That is a great improvement, from 30 seconds to 2 seconds. Nicely done, Pandas!
 Probably we can load the data a bit faster. This time we will use Nushell's
 `polars open` command:
 
-```nu no-run
-> timeit {polars open .\Data7602DescendingYearOrder.csv}
 601ms 700us 700ns
+```nu
+> timeit {polars open Data7602DescendingYearOrder.csv | polars collect; null}
 ```
 
 This time it took us 0.6 seconds. Not bad at all.
@@ -154,36 +155,39 @@ use a large amount of memory. This may affect the performance of your system
 while this is being executed.
 :::
 
-```nu no-run
-> timeit {
-    open .\Data7602DescendingYearOrder.csv
-    | group-by year
-    | transpose header rows
-    | upsert rows { get rows | math sum }
-    | flatten
+```nu
+timeit {
+    open 'Data7602DescendingYearOrder.csv'
+    | group-by year --to-table
+    | update items {|i|
+        $i.items.geo_count
+        | math sum
+    }
 }
-
 6min 30sec 622ms 312us
+```
+```output-numd
 ```
 
 So, six minutes to perform this aggregated operation.
 
 Let's try the same operation in pandas:
 
-```python
-import pandas as pd
+```nu
+('import pandas as pd
 
 df = pd.read_csv("Data7602DescendingYearOrder.csv")
 res = df.groupby("year")["geo_count"].sum()
-print(res)
+print(res)'
+| save load.py -f)
 ```
 
 And the result from the benchmark is:
 
-```nu no-run
-> timeit {python .\load.py}
 
 1sec 966ms 954us 800ns
+```nu
+> timeit {python load.py | null}
 ```
 
 Not bad at all. Again, pandas managed to get it done in a fraction of the time.
@@ -192,15 +196,16 @@ To finish the comparison, let's try Nushell dataframes. We are going to put
 all the operations in one `nu` file, to make sure we are doing similar
 operations:
 
-```nu no-run
-let df = (polars open Data7602DescendingYearOrder.csv)
-let res = ($df | polars group-by year | polars agg (polars col geo_count | polars sum))
-$res
+```nu
+('let df = polars open Data7602DescendingYearOrder.csv
+let res = $df | polars group-by year | polars agg (polars col geo_count | polars sum)
+$res | polars collect'
+| save load.nu -f)
 ```
 
 and the benchmark with dataframes is:
 
-```nu no-run
+```nu
 > timeit {source load.nu}
 
 557ms 658us 500ns
@@ -223,7 +228,7 @@ the examples. In your favorite file editor paste the next lines to create out
 sample csv file.
 
 ```nu
-"int_1,int_2,float_1,float_2,first,second,third,word
+("int_1,int_2,float_1,float_2,first,second,third,word
 1,11,0.1,1.0,a,b,c,first
 2,12,0.2,1.0,a,b,c,second
 3,13,0.3,2.0,a,b,c,third
@@ -234,7 +239,7 @@ sample csv file.
 8,18,0.8,7.0,c,c,b,eight
 9,19,0.9,8.0,c,c,b,ninth
 0,10,0.0,9.0,c,c,b,ninth"
-| save --raw --force test_small.csv
+| save --raw --force test_small.csv)
 ```
 
 Save the file and name it however you want to, for the sake of these examples
@@ -455,14 +460,16 @@ lazy operation waiting to be completed by adding an aggregation. Using the
 or we can define multiple aggregations on the same or different columns
 
 ```nu
-$group | polars agg [
+$group
+| polars agg [
     (polars col int_1 | polars n-unique)
     (polars col int_2 | polars min)
     (polars col float_1 | polars sum)
     (polars col float_2 | polars count)
-] | polars sort-by first
+]
+| polars sort-by first
 ```
-```
+```output-numd
 ╭────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ plan           │ SORT BY [col("first")]                                                                                       │
 │                │   AGGREGATE                                                                                                  │
@@ -483,7 +490,7 @@ as integers, decimals, or strings. Let's create a small dataframe using the
 command `polars into-df`.
 
 ```nu
-> let a = ([[a b]; [1 2] [3 4] [5 6]] | polars into-df)
+> let a = [[a b]; [1 2] [3 4] [5 6]] | polars into-df
 > $a
 ╭───┬───┬───╮
 │ # │ a │ b │
@@ -503,7 +510,7 @@ We can append columns to a dataframe in order to create a new variable. As an
 example, let's append two columns to our mini dataframe `$a`
 
 ```nu
-> let a2 = $a | polars with-column $a.a --name a2 | polars with-column $a.a --name a3
+> let a2 = $a | polars append ($a.a | polars rename a a2) | polars append ($a.a | polars rename a a3)
 > $a2
 ╭───┬───┬───┬────┬────╮
 │ # │ a │ b │ a2 │ a3 │
@@ -555,7 +562,7 @@ Let's start our exploration with Series by creating one using the `polars into-d
 command:
 
 ```nu
-> let new = ([9 8 4] | polars into-df)
+> let new = [9 8 4] | polars into-df
 > $new
 ╭───┬───╮
 │ # │ 0 │
@@ -574,7 +581,7 @@ other Series. Let's create a new Series by doing some arithmetic on the
 previously created column.
 
 ```nu
-> let new_2 = ($new * 3 + 10)
+> let new_2 = $new * 3 + 10
 > $new_2
 ╭───┬────╮
 │ # │ 0  │
@@ -624,7 +631,7 @@ data type
 And we can add them to previously defined dataframes
 
 ```nu
-> let new_df = $a | polars with-column $new --name new_col
+> let new_df = $a | polars append ($new | polars rename '0' new_col)
 > $new_df
 ╭───┬───┬───┬─────────╮
 │ # │ a │ b │ new_col │
@@ -652,7 +659,7 @@ we can multiply columns `a` and `b` to create a new Series
 and we can start piping things in order to create new columns and dataframes
 
 ```nu
-> let $new_df = $new_df | polars with-column ($new_df.a * $new_df.b / $new_df.new_col) --name my_sum
+> let new_df = $new_df | polars with-column ((polars col a) * (polars col b) / (polars col new_col) | polars as my_sum)
 > $new_df
 ╭───┬───┬───┬─────────┬────────╮
 │ # │ a │ b │ new_col │ my_sum │
@@ -685,7 +692,7 @@ mask using the equality operator
 
 and with this mask we can now filter a dataframe, like this
 
-```nu
+```nu no-run
 > $new_df | polars filter-with $mask
 ╭───┬───┬───┬─────────┬────────╮
 │ # │ a │ b │ new_col │ my_sum │
@@ -700,13 +707,13 @@ The masks can also be created from Nushell lists, for example:
 
 ```nu
 > let mask1 = [true true false] | polars into-df
-> $new_df | polars filter-with $mask1
 ╭───┬───┬───┬─────────┬────────╮
 │ # │ a │ b │ new_col │ my_sum │
 ├───┼───┼───┼─────────┼────────┤
 │ 0 │ 1 │ 2 │       9 │      0 │
 │ 1 │ 3 │ 4 │       8 │      1 │
 ╰───┴───┴───┴─────────┴────────╯
+#> $new_df | polars filter-with $mask1
 ```
 
 To create complex masks, we have the `AND`
@@ -919,8 +926,8 @@ Or we can get a mask that we can use to filter out the rows where data is
 unique or duplicated. For example, we can select the rows for unique values
 in column `word`
 
-```nu
-> $df | polars filter-with ($df | polars get word | polars is-unique)
+```nu no-run
+> $df | polars filter-with ((polars col word) | polars is-unique)
 ╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬───────╮
 │ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │ word  │
 ├───┼───────┼───────┼─────────┼─────────┼───────┼────────┼───────┼───────┤
@@ -931,7 +938,7 @@ in column `word`
 
 Or all the duplicated ones
 
-```nu
+```nu no-run
 > $df | polars filter-with ($df | polars get word | polars is-duplicated)
 ╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬────────╮
 │ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │  word  │
@@ -958,7 +965,7 @@ operations.
 Let's create a small example of a lazy dataframe
 
 ```nu
-> let a = [[a b]; [1 a] [2 b] [3 c] [4 d]] | polars into-lazy
+> let a = [[a b]; [1 a] [2 b] [3 c] [4 d]] | polars into-df
 > $a
 ╭────────────────┬───────────────────────────────────────────────────────╮
 │ plan           │ DF ["a", "b"]; PROJECT */2 COLUMNS; SELECTION: "None" │
@@ -970,7 +977,7 @@ As you can see, the resulting dataframe is not yet evaluated, it stays as a
 set of instructions that can be done on the data. If you were to collect that
 dataframe you would get the next result
 
-```nu
+```nu no-run
 > $a | polars collect
 ╭───┬───┬───╮
 │ # │ a │ b │
@@ -1000,14 +1007,15 @@ With your lazy frame defined we can start chaining operations on it. For
 example this
 
 ```nu
-$a |
-    polars reverse |
-    polars with-column [
+$a
+| polars reverse
+| polars with-column [
      ((polars col a) * 2 | polars as double_a)
      ((polars col a) / 2 | polars as half_a)
-] | polars collect
+]
+| polars collect
 ```
-```
+```output-numd
 ╭───┬───┬───┬──────────┬────────╮
 │ # │ a │ b │ double_a │ half_a │
 ├───┼───┼───┼──────────┼────────┤
@@ -1068,15 +1076,17 @@ Let's try something more complicated and create aggregations from a lazy
 dataframe
 
 ```nu
-let a = ( [[name value]; [one 1] [two 2] [one 1] [two 3]] | polars into-lazy )
+let a =  [[name value]; [one 1] [two 2] [one 1] [two 3]] | polars into-df
+
 $a
 | polars group-by name
 | polars agg [
      (polars col value | polars sum | polars as sum)
      (polars col value | polars mean | polars as mean)
-] | polars collect
+]
+| polars collect
 ```
-```
+```output-numd
 ╭───┬──────┬─────┬──────╮
 │ # │ name │ sum │ mean │
 ├───┼──────┼─────┼──────┤
@@ -1089,17 +1099,17 @@ And we could join on a lazy dataframe that hasn't being collected. Let's join
 the resulting group by to the original lazy frame
 
 ```nu
-let a = ( [[name value]; [one 1] [two 2] [one 1] [two 3]] | polars into-lazy )
-let group = ($a
+let a =  [[name value]; [one 1] [two 2] [one 1] [two 3]] | polars into-df
+let group = $a
     | polars group-by name
     | polars agg [
       (polars col value | polars sum | polars as sum)
       (polars col value | polars mean | polars as mean)
     ]
-)
+
 $a | polars join $group name name | polars collect
 ```
-```
+```output-numd
 ╭───┬──────┬───────┬─────┬──────╮
 │ # │ name │ value │ sum │ mean │
 ├───┼──────┼───────┼─────┼──────┤
