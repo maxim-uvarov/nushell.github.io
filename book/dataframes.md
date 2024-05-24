@@ -938,13 +938,21 @@ Or all the duplicated ones
 $df
 | polars append ($in | polars select word | polars is-duplicated)
 | polars filter-with (polars col is_duplicated)
+| polars collect
 ```
 ```output-numd
-╭────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ plan           │ FILTER col("is_duplicated") FROM                                                                      │
-│                │ DF ["int_1", "int_2", "float_1", "float_2"]; PROJECT */9 COLUMNS; SELECTION: "None"                   │
-│ optimized_plan │ DF ["int_1", "int_2", "float_1", "float_2"]; PROJECT */9 COLUMNS; SELECTION: "col(\"is_duplicated\")" │
-╰────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬────────┬───────────────╮
+│ # │ int_1 │ int_2 │ float_1 │ float_2 │ first │ second │ third │  word  │ is_duplicated │
+├───┼───────┼───────┼─────────┼─────────┼───────┼────────┼───────┼────────┼───────────────┤
+│ 0 │     2 │    12 │    0.20 │    1.00 │ a     │ b      │ c     │ second │ true          │
+│ 1 │     3 │    13 │    0.30 │    2.00 │ a     │ b      │ c     │ third  │ true          │
+│ 2 │     4 │    14 │    0.40 │    3.00 │ b     │ a      │ c     │ second │ true          │
+│ 3 │     0 │    15 │    0.50 │    4.00 │ b     │ a      │ a     │ third  │ true          │
+│ 4 │     6 │    16 │    0.60 │    5.00 │ b     │ a      │ a     │ second │ true          │
+│ 5 │     7 │    17 │    0.70 │    6.00 │ b     │ c      │ a     │ third  │ true          │
+│ 6 │     9 │    19 │    0.90 │    8.00 │ c     │ c      │ b     │ ninth  │ true          │
+│ 7 │     0 │    10 │    0.00 │    9.00 │ c     │ c      │ b     │ ninth  │ true          │
+╰───┴───────┴───────┴─────────┴─────────┴───────┴────────┴───────┴────────┴───────────────╯
 ```
 ```numd-output
 ╭───┬───────┬───────┬─────────┬─────────┬───────┬────────┬───────┬────────╮
